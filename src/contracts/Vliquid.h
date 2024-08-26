@@ -1,7 +1,12 @@
 using namespace QPI;
 
+#define LIQUIDS_LENGTH 65536
 #define MILLION 1000000
+#define LIQUID_CREATION_FEE 100000000
 #define VLIQUID_CONTRACTID _mm256_set_epi32(0, 0, 0, 0, 0, 0, 0, 7)
+#define MAX_TOKENS 5
+#define QWALLET_TOKEN 23720092042876753ULL
+#define QWALLET_ISSUER _mm256_set_epi8(159, 170, 86, 88, 138, 163, 10, 22, 193, 210, 63, 118, 200, 26, 123, 233, 100, 223, 40, 231, 166, 64, 98, 26, 117, 108, 211, 34, 206, 186, 192, 98);
 
 struct VLIQUID2
 {
@@ -128,34 +133,34 @@ public:
         id issuer;
         uint64 assetName;
         sint64 expensiveTokenAmount;
-    }
+    };
     struct ConvertToMicroToken_output
     {
         uint64 microTokenAmount;
-    }
+    };
 
     struct ConvertToExpensiveToken_input
     {
         id issuer;
         uint64 assetName;
         uint64 microTokenAmount;
-    }
+    };
     struct ConvertToExpensiveToken_output
     {
         sint64 expensiveTokenAmount;
-    }
+    };
 
     struct TransferMicroToken_input
     {
         id issuer;
-        id recipient;
         uint64 assetName;
+        id recipient;
         uint64 microTokenAmount;
-    }
+    };
     struct TransferMicroToken_output
     {
         uint64 transferredMicroTokenAmount;
-    }
+    };
 
     struct MicroTokenAllowance_input
     {
@@ -174,11 +179,11 @@ public:
 		id issuer;
 		uint64 assetName;
 		id owner;
-	}
+	};
 	struct BalanceOfMicroToken_output
 	{
 		uint64 balance;
-	}
+	};
 
     struct ApproveMicroToken_input
     {
@@ -186,11 +191,11 @@ public:
         id recipient;
         uint64 assetName;
         uint64 microTokenAmount;
-    }
+    };
     struct ApproveMicroToken_output
     {
         uint64 approvedMicroTokenAmount;
-    }
+    };
 
     struct TransferFromMicroToken_input
     {
@@ -199,47 +204,61 @@ public:
         id spender;
         id recipient;
         uint64 microTokenAmount;
-    }
+    };
     struct TransferFromMicroToken_output
     {
         uint64 transferredMicroTokenAmount;
-    }
+    };
 
     struct CreateLiquid_input
     {
-        
-    }
+		struct TokenInfo {
+			id issuer;
+			uint64 assetName;
+			uint64 balance;
+			uint8 weight;
+			bool isMicroToken;
+		};
+        array<TokenInfo, MAX_TOKENS> tokens;
+		uint8 tokenLength;
+		sint64 quShares;
+		uint8 quWeight;
+		uint16 initialLiquid;
+		uint64 feeRate;
+    };
     struct CreateLiquid_output
     {
+		uint64 liquidId;
+    };
 
-    }
-
-    struct AddLiquidity_input
+    struct AddLiquid_input
     {
-        
-    }
-    struct AddLiquidity_output
+		uint64 tokenContribution;
+		uint64 liquidId;
+    };
+    struct AddLiquid_output
     {
+		uint64 addedContribution;
+    };
 
-    }
-
-    struct RemoveLiquidity_input
+    struct RemoveLiquid_input
     {
-        
-    }
-    struct RemoveLiquidity_output
+        uint64 tokenContribution;
+		uint64 liquidId;
+    };
+    struct RemoveLiquid_output
     {
-
-    }
+		uint64  removedContribtion;
+    };
 
     struct Swap_input
     {
         
-    }
+    };
     struct Swap_output
     {
 
-    }
+    };
 
 private:
     // declare state variables
@@ -248,7 +267,7 @@ private:
         id issuer;
         uint64 assetName;
         uint64 balance;
-    }
+    };
     
     array<_MicroTokenBalance, 16777216> _microTokenBalances;
 
@@ -258,13 +277,38 @@ private:
         id issuer;
         uint64 assetName;
         uint64 balance;
-    }
+    };
 
     array<_MicroTokenAllowance, 16777216> _microTokenAllowances;
 
-    struct _LiquidInfo
-    {
-    }
+	struct _LiquidInfo {
+		struct TokenInfo {
+			id issuer;
+			uint64 assetName;
+			uint64 balance;
+			uint64 microTokenBalance;
+			uint64 expensiveTokenBalance;
+			uint8 weight;
+		};
+		struct LiquidProvider {
+			id owner;
+			uint64 tokenContributions;
+		};
+		array<TokenInfo, MAX_TOKENS> tokens;
+		uint8 tokenLength;
+		uint64 quBalance;
+		uint8 quWeight;
+		uint16 totalWeight;
+		uint64 totalLiquid;
+		uint16 feeRate;
+		array<LiquidProvider, 16777216> liquidProviders;
+		uint64 liquidProvidersCount;
+		id creator;
+		bool isCreated;
+	};
+
+	array<_LiquidInfo, LIQUIDS_LENGTH> _liquids;
+	uint64 _liquidsCount;
 
     // declare structs
 	struct _BigNumToStr_input {
@@ -282,7 +326,7 @@ private:
 	};
 	struct _BalanceOfMicroToken_output {
 		uint64 balance;
-	}
+	};
 
 	struct _BigStrToNum_input {
 		uint8 len;
@@ -392,45 +436,130 @@ private:
         id issuer;
         uint64 assetName;
         uint64 microTokenAmount;
-    }
+    };
     struct _MintMicroToken_output
     {
         uint64 mintedMicroTokenAmount;
-    }
+    };
 
     struct _BurnMicroToken_input
     {
         id issuer;
         uint64 assetName;
         uint64 microTokenAmount;
-    }
+    };
     struct _BurnMicroToken_output
     {
         uint64 burntMicroTokenAmount;
-    }
+    };
 
     struct _LockExpensiveToken_input
     {
         id issuer;
         uint64 assetName;
         sint64 expensiveTokenAmount;
-    }
+    };
     struct _LockExpensiveToken_output
     {
         sint64 lockedExpensiveTokenAmount;
-    }
+    };
 
     struct _UnLockExpensiveToken_input
     {
         id issuer;
         uint64 assetName;
         sint64 expensiveTokenAmount;
-    }
+    };
     struct _UnLockExpensiveToken_output
     {
         sint64 unLockedExpensiveTokenAmount;
-    }
-    
+    };
+
+	static bool _isTokenInLiquid(_LiquidInfo& _liquid, id _issuer, uint64 _assetName)
+	{
+		uint8 _tokenLength = _liquid.tokenLength;
+		for(int i = 0; i < _tokenLength; i ++) {
+			const _LiquidInfo::TokenInfo& _token = _liquid.tokens.get(i);
+			if (_token.issuer == _issuer && _token.assetName = _assetName) {
+				return true;
+			}
+		}
+		return false;
+	}
+	
+	static uint8 _getTokenIndex(_LiquidInfo& _liquid, id _issuer, uint64 _assetName)
+	{
+		uint8 _tokenLength = _liquid.tokenLength;
+		for(uint8 i = 0; i < _tokenLength; i ++) {
+			const _LiquidInfo::TokenInfo& token = _liquid.tokens.get(i);
+			if (token.issuer == _issuer && token.assetName == _assetName) {
+				return i;
+			}
+		}
+		// if not found, return MAX_TOKENS
+		return MAX_TOKENS;
+	}
+
+	static _LiquidInfo::LiquidProvider& _findProvder(_LiquidInfo& _liquid, id _provider)
+	{
+		uint64 _liquidProvidersCount = _liquid.liquidProvidersCount;
+
+		// Search for the provider
+		for(uint64 i = 0; uint64 i < _liquidProvidersCount; i ++) {
+			if(_liquid._liquidProviders.get(i).owner == _provider) {
+				return _liquid._liquidProviders.get(i);
+			}
+		}
+
+		return nullptr
+	}
+
+	static _LiquidInfo::LiquidProvider& _findOrCreateProvider(_LiquidInfo& _liquid, id _provider)
+	{
+		uint64 _liquidProvidersCount = _liquid.liquidProvidersCount;
+
+		// Search for the provider
+		for(uint64 i = 0; uint64 i < _liquidProvidersCount; i ++) {
+			if(_liquid._liquidProviders.get(i).owner == _provider){
+				return _liquid._liquidProviders.get(i);
+			}
+		}
+
+		// Create a new provider if not found
+		_LiquidInfo::LiquidProvider _newProvider{_provider, 0};
+
+		// Add the new provider to the list
+		_liquid.liquidProviders.set(_liquidProvidersCount, _newProvider);
+		_liquid.liquidProvidersCount ++;
+
+		// Return a reference to the newly added provider
+		return _liquid.liquidProviders.get(_liquid.liquidProvidersCount - 1);
+	}
+
+	static void _removeProvider(_LiquidInfo& _liquid, id _provider) {
+		uint64 _liquidProvidersCount = _liquid.liquidProvidersCount;
+
+		// Iterate through the list to find the provider
+		for (uint64 i = 0; i < _liquidProvidersCount; i ++) {
+			_LiquidInfo::LiquidProvider& _currentProvider = _liquid._liquidProviders.get(i);
+
+			// Check if the current provider mathches the one to be removed
+			if (_currentProvider.owner == _provider) {
+
+				// If it's the last provider in the list, simply decrement the count
+				if(i == _liquidProvidersCount - 1) {
+					_liquid.liquidProvidersCount --;
+				} else {
+					// Otherwise, swap the last provider and then decrement the count
+					_LiquidInfo::LiquidProvider& _lastProvider = _liquid._liquidProviders.get(_liquidProvidersCount - 1);
+					_liquid._liquidProviders.set(i, _lastProvider);
+					_liquid/liquidProvidersCount--;
+				}
+				return;
+			}
+		}
+	}
+
     _
 
     // write PRIVATE_FUNCTION
@@ -489,7 +618,7 @@ private:
     {
         sint64 _a; // input number
         uint64 _p; // power of ten
-    }
+    };
     PRIVATE_FUNCTION_WITH_LOCALS(_BigNumToStr)
         locals._a = input.a;
         locals._p = 1;
@@ -529,7 +658,7 @@ private:
         uint8_128 _tempa;
         uint8_128 _tempb;
         uint8_128 _tempResult;
-    }
+    };
     PRIVATE_FUNCTION_WITH_LOCALS(_BigPlus)
 		// checking if a is positive
 		for(uint8 i = 0; i < input.alen; i++) {
@@ -584,7 +713,7 @@ private:
 		uint8_128 _tempResult;
 		bit _borrow;
 		uint8 _zeroCount;
-    }
+    };
     PRIVATE_FUNCTION_WITH_LOCALS(_BigMinus)
 		// checking if the result would be positive
 		if (input.blen > input.alen) {
@@ -639,7 +768,7 @@ private:
 		uint8_128 _tempResult;
 		uint8 _length;
 		bit _zeroCheck;
-    }
+    };
     PRIVATE_FUNCTION_WITH_LOCALS(_BigMultiply)
 		if(input.a.get(0) == '-') {     // when a is negative
 			// checking if a is number
@@ -722,7 +851,7 @@ private:
 		uint8_128 _current;
 		uint8 _currentLen;
 		bit _flag;
-    }
+    };
     PRIVATE_FUNCTION_WITH_LOCALS(_BigDiv)
 		locals._tempalen = 0;
 		locals._tempblen = 0;
@@ -858,7 +987,7 @@ private:
 		uint8_128 _current;
 		uint8 _currentLen;
 		bit _flag;
-    }
+    };
     PRIVATE_FUNCTION_WITH_LOCALS(_BigModulus)
 		locals._tempalen = 0;
 		locals._tempblen = 0;
@@ -973,7 +1102,7 @@ private:
     {
 		uint8 _tlena;
 		uint8 _tlenb;
-    }
+    };
     PRIVATE_FUNCTION_WITH_LOCALS(_BigGreaterOrEqual)
         // checking if a is positive
 		for(uint8 i = 0; i < input.alen; i++) {
@@ -1023,7 +1152,7 @@ private:
     {
 		uint8 _tlena;
 		uint8 _tlenb;
-    }
+    };
     PRIVATE_FUNCTION_WITH_LOCALS(_BigLessOrEqual)
         // checking if a is positive
 		for(uint8 i = 0; i < input.alen; i++) {
@@ -1073,7 +1202,7 @@ private:
     {
 		uint8 _tlena;
 		uint8 _tlenb;
-    }
+    };
     PRIVATE_FUNCTION_WITH_LOCALS(_BigGreater)
 		// checking if a is positive
 		for(uint8 i = 0; i < input.alen; i++) {
@@ -1123,7 +1252,7 @@ private:
     {
         uint8 _tlena;
 		uint8 _tlenb;
-    }
+    };
     PRIVATE_FUNCTION_WITH_LOCALS(_BigLess)
         // checking if a is positive
 		for(uint8 i = 0; i < input.alen; i++) {
@@ -1174,7 +1303,7 @@ private:
     {
         bool _balanceFound;
         _MicroTokenBalance _newBalance;
-    }
+    };
     PRIVATE_PROCEDURE_WITH_LOCALS(_MintMicroToken)
         locals._balanceFound = false;
         output.mintedMicroTokenAmount = 0;
@@ -1208,7 +1337,7 @@ private:
     struct _BurnMicroToken_locals
     {
         bool _balanceFound;
-    }
+    };
     PRIVATE_PROCEDURE_WITH_LOCALS(_BurnMicroToken)
         locals._balanceFound = false;
         output.burntMicroTokenAmount = 0;
@@ -1235,7 +1364,7 @@ private:
     struct _LockExpensiveToken_locals
     {
         
-    }
+    };
     PRIVATE_PROCEDURE_WITH_LOCALS(_LockExpensiveToken)
 		if (qpi.numberOfPossessedShares(input.issuer, input.assetName, qpi.invocator(), qpi.invocator(), SELF_INDEX, SELF_INDEX) < input.expensiveTokenAmount)
 		{
@@ -1252,7 +1381,7 @@ private:
     {
 		_BalanceOfMicroToken_input _balanceOfMicroToken_input;
 		_BalanceOfMicroToken_output _balanceOfMicroToken_output;
-    }
+    };
     PRIVATE_PROCEDURE_WITH_LOCALS(_UnLockExpensiveToken)
 		locals._balanceOfMicroToken_input.issuer = input.issuer;
 		locals._balanceOfMicroToken_input.assetName = input.assetName;
@@ -1288,7 +1417,7 @@ private:
 	{
 		_BalanceOfMicroToken_input _balanceOfMicroToken_input;
 		_BalanceOfMicroToken_output _balanceOfMicroToken_output;
-	}
+	};
 	PUBLIC_FUNCTION_WITH_LOCALS(BalanceOfMicroToken)
 		locals._balanceOfMicroToken_input.issuer = input.issuer;
 		locals._balanceOfMicroToken_input.assetName = input.assetName;
@@ -1301,7 +1430,7 @@ private:
 	{
 		_BigNumToStr_input _input;
 		_BigNumToStr_output _output;
-	}
+	};
     PUBLIC_FUNCTION_WITH_LOCALS(BigNumToStr)
 		locals._input.a = input.a;
 		CALL(_BigNumToStr, locals._input, locals._output);
@@ -1313,7 +1442,7 @@ private:
 	{
 		_BigStrToNum_input _input;
 		_BigStrToNum_output _output;
-	}
+	};
     PUBLIC_FUNCTION_WITH_LOCALS(BigStrToNum)
 		locals._input.len = input.len;
 		locals._input.a = input.a;
@@ -1325,7 +1454,7 @@ private:
 	{
 		_BigPlus_input _input;
 		_BigPlus_output _output;
-	}
+	};
 	PUBLIC_FUNCTION_WITH_LOCALS(BigPlus)
 		locals._input.alen = input.alen;
 		locals._input.blen = input.blen;
@@ -1340,7 +1469,7 @@ private:
 	{
 		_BigMinus_input _input;
 		_BigMinus_output _output;
-	}
+	};
 	PUBLIC_FUNCTION_WITH_LOCALS(BigMinus)
 		locals._input.alen = input.alen;
 		locals._input.blen = input.blen;
@@ -1355,7 +1484,7 @@ private:
 	{
 		_BigMultiply_input _input;
 		_BigMultiply_output _output;
-	}
+	};
 	PUBLIC_FUNCTION_WITH_LOCALS(BigMultiply)
 		locals._input.alen = input.alen;
 		locals._input.blen = input.blen;
@@ -1370,7 +1499,7 @@ private:
 	{
 		_BigDiv_input _input;
 		_BigDiv_output _output;
-	}
+	};
 	PUBLIC_FUNCTION_WITH_LOCALS(BigDiv)
 		locals._input.alen = input.alen;
 		locals._input.blen = input.blen;
@@ -1385,7 +1514,7 @@ private:
 	{
 		_BigModulus_input _input;
 		_BigModulus_output _output;
-	}
+	};
 	PUBLIC_FUNCTION_WITH_LOCALS(BigModulus)
 		locals._input.alen = input.alen;
 		locals._input.blen = input.blen;
@@ -1400,7 +1529,7 @@ private:
 	{
 		_BigGreaterOrEqual_input _input;
 		_BigGreaterOrEqual_output _output;
-	}
+	};
 	PUBLIC_FUNCTION_WITH_LOCALS (BigGreaterOrEqual)
 		locals._input.alen = input.alen;
 		locals._input.blen = input.blen;
@@ -1414,7 +1543,7 @@ private:
 	{
 		_BigLessOrEqual_input _input;
 		_BigLessOrEqual_output _output;
-	}
+	};
 	PUBLIC_FUNCTION_WITH_LOCALS (BigLessOrEqual)
 		locals._input.alen = input.alen;
 		locals._input.blen = input.blen;
@@ -1428,7 +1557,7 @@ private:
 	{
 		_BigGreater_input _input;
 		_BigGreater_output _output;
-	}
+	};
 	PUBLIC_FUNCTION_WITH_LOCALS (BigGreater)
 		locals._input.alen = input.alen;
 		locals._input.blen = input.blen;
@@ -1442,7 +1571,7 @@ private:
 	{
 		_BigLess_input _input;
 		_BigLess_output _output;
-	}
+	};
 	PUBLIC_FUNCTION_WITH_LOCALS (BigLess)
 		locals._input.alen = input.alen;
 		locals._input.blen = input.blen;
@@ -1458,8 +1587,7 @@ private:
     {
         bool _allowanceFound;
         _MicroTokenAllowance _newAllowance;
-    }
-
+    };
     PUBLIC_PROCEDURE_WITH_LOCALS(ApproveMicroToken)
         if (qpi.invocationReward() > 0)
         {
@@ -1499,10 +1627,7 @@ private:
         bool _balanceFound;
         bool _recipientBalanceFound;
         _MicroTokenBalance _newBalance;
-    }
-
-    _
-
+    };
     PUBLIC_PROCEDURE_WITH_LOCALS(TransferMicroToken)
         if (qpi.invocationReward() > 0)
         {
@@ -1561,8 +1686,7 @@ private:
         bool _spenderBalanceFound;
         bool _recipientBalanceFound;
         _MicroTokenBalance newBalance;
-    }
-
+    };
     PUBLIC_PROCEDURE_WITH_LOCALS(TransferFromMicroToken)
         if (qpi.invocationReward() > 0)
         {
@@ -1644,7 +1768,7 @@ private:
 		_MintMicroToken_input _mintMicroToken_input;
 		_MintMicroToken_output _mintMicroToken_output;
 		id _zeroIssuer;
-	}
+	};
     PUBLIC_PROCEDURE_WITH_LOCALS(ConvertToMicroToken)
 		if (qpi.invocationReward() > 0)
 		{
@@ -1684,7 +1808,7 @@ private:
 		_UnLockExpensiveToken_output _unLockExpensiveToken_output;
 		_BurnMicroToken_input _burnMicroToken_input;
 		_BurnMicroToken_output _burnMicroToken_output;
-	}
+	};
     PUBLIC_PROCEDURE_WITH_LOCALS(ConvertToExpensiveToken)
 		if (qpi.invocationReward() > 0)
 		{
@@ -1712,23 +1836,336 @@ private:
 			CALL(_UnLockExpensiveToken, locals._unLockExpensiveToken_input, locals._unLockExpensiveToken_output);
 			output.expensiveTokenAmount = locals._unLockExpensiveToken_output.expensiveTokenAmount;
 		}
-    
+
+    _
+
+	struct CreateLiquid_locals {
+		_LiquidInfo _newLiquid;
+		uint16 _totalWeight;
+		array<_LiquidInfo::TokenInfo, MAX_TOKENS> _tokens;
+		array<_LiquidInfo::LiquidProvider, 16777216> _liquidProviders;
+		CreateLiquid_input::TokenInfo _qwalletToken;
+	};
+
+	// Public procedure to create a new liquidity pool
+	// This procedure handles the validation of input tokens and 
+	// ensures that the initial conditions for creating a valid pool are met
+	PUBLIC_PROCEDURE_WITH_LOCALS(CreateLiquid)
+		if(qpi.invocationReward() < input.quShares + LIQUID_CREATION_FEE) {
+			// Transfer invocation reward if it's less than required quShares
+			qpi.transfer(qpi.invocator(), qpi.invocationReward());
+			return;
+		} else if(qpi.invocationReward() > input.quShares + LIQUID_CREATION_FEE) {
+			// Transfer excess invocation reward if it's more than required quShares
+			qpi.transfer(qpi.invocator(), qpi.invocationReward() - input.quShares - LIQUID_CREATION_FEE);
+		}
+
+		// Ensure the first token is QWALLET
+		locals._qwalletToken = input.tokens.get(0);
+		if(locals._qwalletToken.issuer != QWALLET_ISSUER || locals._qwalletToken.assetName != QWALLET_TOKEN)
+		{
+			qpi.transfer(qpi.invocator(), qpi.invocationReward());
+			return; // Error: the first token must be QWALLET
+		}
+
+		for(uint8 i = 0; i < input.tokenLength; i ++) {
+			const CreateLiquid_input::TokenInfo& _nthToken = input.tokens.get(i);
+
+			// Ensure the other tokens is not QWALLET
+			if(i > 0 && _nthToken.issuer == QWALLET_ISSUER && _nthToken.assetName == QWALLET_TOKEN) {
+				qpi.transfer(qpi.invocator(), qpi.invocationReward());
+				return; // Error: other tokens can't be QWALLET
+			}
+
+			// Validate token weight (must be > 0)
+			if (_nthToken.weight <= 0) {
+				qpi.transfer(qpi.invocator(), qpi.invocationReward());
+				return; // Error: token weight must be greater than 0
+			}
+
+			// Validate token balance (must be > 0)
+			if (_nthToken.balance <= 0) {
+				qpi.transfer(qpi.invocator(), qpi.invocationReward());
+				return; // Error: initial token balance must be greater than 0
+			}
+
+			// Handle MicroToken specific validations
+			if(_nthToken.isMicroToken)
+			{
+				// Ensure MicroToken allowance is sufficient compared to initial balance
+				MicroTokenAllowance_input _microTokenAllowance_input{_nthToken.issuer, _nthToken.assetName, VLIQUID_CONTRACTID, qpi.invocator()};
+				MicroTokenAllowance_output _microTokenAllowance_output;
+				CALL(MicroTokenAllowance, _microTokenAllowance_input, _microTokenAllowance_output);
+				if (_microTokenAllowance_output.balance < _nthToken.balance)
+				{
+					qpi.transfer(qpi.invocator(), qpi.invocationReward());
+					return; // Error: insufficient MicroToken allowance
+				}
+
+				// Ensure MicroToken balance is sufficient compared to initial balance
+				BalanceOfMicroToken_input _balanceOfMicroToken_input{_nthToken.issuer, _nthToken.assetName, qpi.invocator()};
+				BalanceOfMicroToken_output _balanceOfMicroToken_output;
+				if(_balanceOfMicroToken_output.balance < _nthToken.balance){
+					qpi.transfer(qpi.invocator(), qpi.invocationReward());
+					return; // Error: insufficient MicroToken balance
+				}
+
+			}
+			else
+			{
+				// Ensure sufficient token shares for non-MicroTokens
+				if (qpi.numberOfPossessedShares(_nthToken.issuer, _nthToken.assetName, qpi.invocator(), qpi.invocator(), SELF_INDEX, SELF_INDEX) < _nthToken.balance) {
+					qpi.transfer(qpi.invocator(), qpi.invocationReward());
+					return; // Error: insufficient token shares
+				}
+			}
+
+			// Accumulate total weight of the tokens
+			locals._totalWeight += _nthToken.weight;
+		}
+
+		// Validate that QWALLET's weight is greater than 10% of the total weight
+		if(locals._qwalletToken.weight * 100 / locals._totalWeight < 10) {
+			qpi.transfer(qpi.invocator(), qpi.invocationReward());
+			return; // Error: QWALLET weight must be greater than 10%
+		}
+
+		// Initialize the first liquid provider with the invocator's contribution
+		locals._liquidProviders.set(0, _LiquidInfo::LiquidProvider({
+			owner: qpi.invocator(),
+			tokenContributions: initialLiquid
+		}))
+
+		// Execute transfer each token
+		for(uint8 i = 0; i < input.tokenLength; i ++) {
+			const CreateLiquid_input::TokenInfo& _nthToken = input.tokens.get(i);
+
+			if(_nthToken.isMicroToken)
+			{
+				// Execute the MicroToken transfer
+				TransferFromMicroToken_input _transferFromMicroToken_input{_nthToken.issuer, _nthToken.assetName, qpi.invocator(), VLIQUID_CONTRACTID, _nthToken.balance};
+				TransferFromMicroToken_output _transferFromMicroToken_output;
+
+				CALL(TransferFromMicroToken, _transferFromMicroToken_input, _transferFromMicroToken_output);
+
+				locals._tokens.set(i, _LiquidInfo::TokenInfo{_nthToken.issuer, _nthToken.assetName, _nthToken.balance, _nthToken.balance, 0, _nthToken.weight});
+			}
+			else
+			{
+				// Transfer ownership and possession of shares to this contract
+				qpi.transferShareOwnershipAndPossession(_nthToken.assetName, _nthToken.issuer, qpi.invocator(), qpi.invocator(), _nthToken.balance, VLIQUID_CONTRACTID);
+				locals._tokens.set(i, _LiquidInfo::TokenInfo{_nthToken.issuer, _nthToken.assetName, _nthToken.balance * MILLION, 0, _nthToken.balance, _nthToken.weight});
+			}
+		}
+
+		// Create a new liquid pool
+		locals._newLiquid = _LiquidInfo{locals._tokens, input.tokenLength, input.quShares, input.quWeight, locals._totalWeight, input.initialLiquid, input.feeRate, locals._liquidProviders, 1, qpi.invocator(), true};
+
+		// Store the newly created liquid pool and assign an ID
+		state._liquids.set(state._liquidsCount, locals._newLiquid);
+		output.liquidId = state._liquidsCount;
+		state._liquidsCount ++;
+	_
+
+	struct AddLiquid_locals {
+		_LiquidInfo _liquid;
+		AddLiquid_input::TokenInfo _qwalletToken;
+		uint64 _quContribtion;
+		_LiquidInfo::LiquidProvider& _provider;
+	};
+	// Public procedure to add liquidity to an existing pool
+	// This procedure validates the additional token contributions, 
+	// calculates the corresponding QU contribution, and updates the liquidity.
+	// It ensures the liquidity pool is valid and handles both MicroToken 
+	// and regular token transfers appropriately.
+    PUBLIC_PROCEDURE_WITH_LOCALS(AddLiquid)
+		// Validate that the token contribution is greater than 0
+		if(input.tokenContribution <= 0) {
+			qpi.transfer(qpi.invocator(), qpi.invocationReward());
+			return; // Error: token contribution (must be > 0)
+		}
+
+		// Retrieve the targeted liquid based on the provided ID
+		locals._liquid = state._liquids.get(input.liquidId);
+		
+		// Ensure the liquid has been created
+		if(!locals._liquid.isCreated) {
+			qpi.transfer(qpi.invocator(), qpi.invocationReward());
+			return; // Error: the liquid is not created
+		}
+
+		// Calculate the required QU contribution based on the input token contribution
+		locals._quContribution = locals._liquid.quBalance * input.tokenContribution / locals._liquid.totalLiquid;
+
+		// Handle the invocation reward with respect to the QU contribution
+		if(qpi.invocationReward() < locals._quContribution) {
+			// Transfer invocation reward if it's less than required quContribution
+			qpi.transfer(qpi.invocator(), qpi.invocationReward());
+			return;
+		} else if(qpi.invocationReward() > locals._quContribution) {
+			// Transfer excess invocation reward if it exceeds the required QU contribution
+			qpi.transfer(qpi.invocator(), qpi.invocationReward() - locals._quContribution);
+
+			locals.liquid.quBalance += locals._quContribution;
+		}
+
+		// Find or create a liquid provider entry for the invocator
+		locals._provider = _findOrCreateProvider(locals._liquid, qpi.invocator());
+
+		// Validate each token in the liquidity pool
+		for(uint8 i = 0; i < locals._liquid.tokenLength; i ++) {
+			_LiquidInfo::TokenInfo& _nthToken = locals._liquid.tokens.get(i);
+			uint64 _nthTokenContribution = _nthToken.balance * input.tokenContribution / locals._liquid.totalLiquid;
+			
+			// Handle token-specific validations and transfers
+			if(_nthToken.isMicroToken)
+			{
+				// Validate and transfer MicroTokens
+				MicroTokenAllowance_input _microTokenAllowance_input{_nthToken.issuer, _nthToken.assetName, VLIQUID_CONTRACTID, qpi.invocator()};
+				MicroTokenAllowance_output _microTokenAllowance_output;
+				CALL(MicroTokenAllowance, _microTokenAllowance_input, _microTokenAllowance_output);
+				if (_microTokenAllowance_output.balance < _nthTokencontribution)
+				{
+					qpi.transfer(qpi.invocator(), qpi.invocationReward());
+					return; // Error: insufficient MicroToken allowance
+				}
+				
+				// Ensure MicroToken balance is sufficient compared to initial balance
+				BalanceOfMicroToken_input _balanceOfMicroToken_input{_nthToken.issuer, _nthToken.assetName, qpi.invocator()};
+				BalanceOfMicroToken_output _balanceOfMicroToken_output;
+				if(_balanceOfMicroToken_output.balance < _nthTokencontribution){
+					qpi.transfer(qpi.invocator(), qpi.invocationReward());
+					return; // Error: insufficient MicroToken balance
+				}
+			
+				// Update the token balance in the liquid
+				_nthToken.microTokenBalance += _nthTokenContribution;
+				_nthToken.balance += _nthTokenContribution;
+			}
+			else
+			{
+				// Ensure sufficient token shares for non-MicroTokens
+				if (qpi.numberOfPossessedShares(_nthToken.issuer, _nthToken.assetName, qpi.invocator(), qpi.invocator(), SELF_INDEX, SELF_INDEX) < _nthTokenContribution) {
+					qpi.transfer(qpi.invocator(), qpi.invocationReward());
+					return; // Error: insufficient token shares
+				}
+
+				// Update the token balance in the liquid
+				_nthToken.expensiveTokenBalance += _nthTokenContribution;
+				_nthToken.balance += _nthTokenContribution * MILLION;
+			}
+		}
+
+		// Execute transfer each token
+		for(uint8 i = 0; i < locals._liquid.tokenLength; i ++) {
+			const _LiquidInfo::TokenInfo& _nthToken = locals._liquid.tokens.get(i);
+			uint64 _nthTokenContribution = _nthToken.balance * input.tokenContribution / locals._liquid.totalLiquid;
+			
+			// Handle token-specific validations and transfers
+			if(_nthToken.isMicroToken)
+			{
+				// Execute the MicroToken transfer
+				TransferFromMicroToken_input _transferFromMicroToken_input{_nthToken.issuer, _nthToken.assetName, qpi.invocator(), VLIQUID_CONTRACTID, _nthTokencontribution};
+				TransferFromMicroToken_output _transferFromMicroToken_output;
+
+				CALL(TransferFromMicroToken, _transferFromMicroToken_input, _transferFromMicroToken_output);
+			}
+			else
+			{
+				// Transfer ownership and possession of shares to this contract
+				qpi.transferShareOwnershipAndPossession(_nthToken.assetName, _nthToken.issuer, qpi.invocator(), qpi.invocator(), _nthTokenContribution / MILLION, VLIQUID_CONTRACTID);
+			}
+		}
+
+		// Update the liquid provider's contributions and the total liquidity of the liquid
+		locals._provider.tokenContributions += input.tokenContribution;
+		locals._liquid.totalLiquid += input.tokenContribution;
+		state._liquids.set(input.liquidId, locals._liquid);
+		output.addedContribution = input.tokenContribution;
+    _
+
+
+    PUBLIC_PROCEDURE_WITH_LOCALS(AddLiquidSingle)
+
+    _
+
+	struct RemoveLiquid_locals {
+		_LiquidInfo _liquid;
+		_LiquidInfo::LiquidProvider& _provider;
+	}
+    PUBLIC_PROCEDURE_WITH_LOCALS(RemoveLiquid)
+		// Retrieve the targeted liquid based on the provided ID
+		locals._liquid = state._liquids.get(input.liquidId);
+		
+		// Find the provider associated with the invocator
+		locals._provider = _findProvder(locals._liquid, qpi.invocator());
+		// Check if the participant exists
+		if (locals._provider == nullptr) {
+			if(qpi.invocationReward() > 0) {
+				qpi.transfer(qpi.invocator(), qpi.invocationReward())
+			}
+			return; // Error: Participant not found
+		}
+
+		// Check if the provider's contribution is sufficient
+		if(locals._provider.tokenContributions < input.tokenContribution) {
+			if(qpi.invocationReward() > 0) {
+				qpi.transfer(qpi.invocator(), qpi.invocationReward())
+			}
+			return; // Error: Insufficient token contribution
+		}
+
+		// Calculate and transfer the corresponding QU tokens to the invocator
+		// QU transfer
+		uint64 _removedQuBalance = locals._liquid.quBalance * input.tokenContribution / locals._liquid.totalLiquid;
+		qpi.transfer(qpi.invocator(), _removedQuBalance);
+		locals._liquid.quBalance -= _removedQuBalance;
+
+		// Process each token in the liquid pool
+		// Token transfer
+		for(uint8 i = 0; i < locals._liquid.tokenLength; i ++) {
+			// To Do: convert some liquid expensive token to micro token
+
+			const _LiquidInfo::TokenInfo& _nthToken = locals._liquid.tokens.get(i);
+
+			// Calculate the micro token amount of tokens to remove
+			uint64 _removedMicroTokenBalance = _nthToken.microTokenBalance * input.tokenContribution / locals._liquid.totalLiquid;
+
+			TransferMicroToken_input _transferMicroToken_input{_nthToken.issuer, _nthToken.assetName, VLIQUID_CONTRACTID, _removedMicroTokenBalance};
+			TransferMicroToken_output _transferMicroToken_output;
+			CALL(TransferMicroToken, _transferMicroToken_input, _transferMicroToken_output);
+
+			// Update the micro token balance in the liquid pool
+			_nthToken.microTokenBalance -= _removedMicroTokenBalance;
+
+			// Calculate the expensive token amount of tokens to remove
+			uint64 _removedExpensiveTokenBalance = _nthToken.expensiveTokenBalance * input.tokenContribution / locals._liquid.totalLiquid;
+
+			// Update the expensive token balance in the liquid pool
+			_nthToken.expensiveTokenBalance -= _removedExpensiveTokenBalance;
+
+			qpi.transferShareOwnershipAndpossession(_nthToken.assetName, _nthToken.issuer, VLIQUID_CONTRACTID, qpi.invocator(), _removedExpensiveTokenBalance / MILLION);
+
+			// Update the token blance in the liquid pool
+			_nthToken.balance -= _removedMicroTokenBalance;
+		}
+
+		// Update the provider's contribution and the total liquid in the pool
+		locals._provider.tokenContributions -= input.tokenContribution;
+		locals._liquid.totalLiquid -= input.tokenContribution;
+
+		// If the provider has withdrawn all contributions, remove them from the poroviders list
+		if (locals._provider.tokenContributions == 0) {
+			_removeProvider(locals._liquid, qpi.invocator());
+		}
+
+		// Save the updated liquid state
+		state._liquids.set(input.liquidId, locals._liquid);
+
+		output.removedContribution = input.tokenContribution;
     _
 
     // write PUBLIC_PROCEDURE
-
-    PUBLIC_PROCEDURE(CreateLiquid)
-
-    _
-
-    PUBLIC_PROCEDURE(AddLiquidity)
-    
-    _
-
-    PUBLIC_PROCEDURE(RemoveLiquidity)
-    
-    _
-
     PUBLIC_PROCEDURE(Swap)
     
     _
@@ -1753,8 +2190,8 @@ private:
         REGISTER_USER_PROCEDURE(ConvertToMicroToken, 16);
         REGISTER_USER_PROCEDURE(ConvertToExpensiveToken, 17);
         REGISTER_USER_PROCEDURE(CreateLiquid, 18);
-        REGISTER_USER_PROCEDURE(AddLiquidity, 19);
-        REGISTER_USER_PROCEDURE(RemoveLiquidity, 20);
+        REGISTER_USER_PROCEDURE(AddLiquid, 19);
+        REGISTER_USER_PROCEDURE(RemoveLiquid, 20);
         REGISTER_USER_PROCEDURE(Swap, 21);
     _
 
