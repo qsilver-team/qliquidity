@@ -237,6 +237,44 @@ public:
         uint64 outputQuAmount;
     };
 
+    struct InitializeStakingPool_input
+    {
+        uint64 liquidId;
+        TokenInfo bonusTokenInfo;
+    };
+    struct InitializeStakingPool_output
+    {
+        bool success;
+    };
+
+    struct DepositeBonusToken_input {
+        uint64 liquidId;
+        uint64 bonusTokenAmount;
+    };
+    struct DepositeBonusToken_output {
+        uint64 depositedBonusTokenAmount;
+    };
+
+    struct Stake_input
+    {
+        uint64 liquidId;
+        uint64 lpAmount;
+    };
+    struct Stake_output
+    {
+        uint64 stakedLpAmount;
+    };
+
+    struct Unstake_input
+    {
+        uint64 liquidId;
+        uint64 lpAmount;
+    };
+    struct Unstake_output
+    {
+        uint64 unstakedLpAmount;
+    };
+
     // Exam
     struct ExamPublic_input
     {
@@ -337,6 +375,7 @@ private:
 		uint16 feeRate;
 		array<LiquidProvider, 131072> liquidProviders;
 		uint64 liquidProvidersCount;
+        id owner;
 		id creator;
 		bool isCreated;
 	};
@@ -345,6 +384,29 @@ private:
 
 	array<_LiquidInfo, LIQUIDS_LENGTH> _liquids;
 	uint64 _liquidsCount;
+
+    struct _Staker {
+        id stakerId;
+        uint64 stakedAmount;
+        uint64 rewardDebt;
+    };
+
+    struct _StakingPool {
+        uint64 liquidId;
+        uint64 totalStaked;
+        TokenInfo bonusTokenInfo;
+        uint64 totalBonusTokenAmount;
+        uint64 accPerShare;
+        uint64 lastRewardTick;
+        bool isInitialized;
+        array <_Staker, 32768> stakers;
+        uint64 stakerCount;
+    };
+
+    _StakingPool _tempStakingPool;
+
+    array<_StakingPool, LIQUIDS_LENGTH> _stakingPools;
+    uint64 _stakingPoolsCount;
 
     struct _ExamPrivate_input
     {
@@ -924,6 +986,7 @@ private:
         state._tempLiquid.feeRate = input.feeRate;
         state._tempLiquid.liquidProvidersCount = 1;
         state._tempLiquid.creator = qpi.invocator();
+        state._tempLiquid.owner = qpi.invocator();
         state._tempLiquid.isCreated = true;
 
 		// Store the newly created liquid pool and assign an ID
@@ -1648,6 +1711,271 @@ private:
         output.outputAmountB = locals._swapFromQwallet_output.outputAmount;
         output.outputQwalletAmount = locals._swapToQwallet_output.qwalletAmount;
         output.outputQuAmount = locals._swapFromQwallet_output.quAmount + locals._swapToQwallet_output.quAmount;
+    _
+    struct InitializeStakingPool_locals {
+    };
+    PUBLIC_PROCEDURE_WITH_LOCALS(InitializeStakingPool)
+        state._tempLiquid = state._liquids.get(input.liquidId);
+
+        // if liquid was not created, return invocation reward and exit
+        if(!state._tempLiquid.isCreated) {
+            qpi.transfer(qpi.invocator(), qpi.invocationReward());
+            return;
+        }
+
+        // validate if the invocator is liquid owner
+        if(state._tempLiquid.owner != qpi.invocator()) {
+            qpi.transfer(qpi.invocator(), qpi.invocationReward());
+            return;
+        }
+        
+        state._tempStakingPool.liquidId = input.liquidId;
+        state._tempStakingPool.totalStaked = 0;
+        state._tempStakingPool.totalBonusTokenAmount = 0;
+        state._tempStakingPool.accPerShare = 0;
+        state._tempStakingPool.lastRewardTick= qpi.tick();
+        state._tempStakingPool.isInitialized = true;
+        state._tempStakingPool.stakerCount = 0;
+        state._tempStakingPool.bonusTokenInfo = input.bonusTokenInfo;
+
+        state._stakingPools.set(input.liquidId, state._tempStakingPool);
+        state._stakingPoolsCount++;
+        output.success = true;
+    _
+    struct DepositeBonusToken_locals {
+
+    };
+    PUBLIC_PROCEDURE_WITH_LOCALS(DepositeBonusToken)
+        // Retrieve the staking pool based on the provided liquid ID
+        state._tempStakingPool = state._stakingPools.get(input.liquidId);
+
+        // Check if the staking pool is initialized
+        if (!state._tempStakingPool.isInitialized) {
+            qpi.transfer(qpi.invocator(), qpi.invocationReward());
+            return; // Error: Staking pool not initialized
+        }
+
+        // Validate the bonus token amount
+        if (input.bonusTokenAmount <= 0) {
+            qpi.transfer(qpi.invocator(), qpi.invocationReward());
+            return; // Error: Invalid bonus token amount
+        }
+
+        // Transfer the bonus tokens to the staking pool
+        TransferMicroToken_input _transferMicroToken_input{ 
+            state._tempStakingPool.bonusTokenInfo.issuer,
+            state._tempStakingPool.bonusTokenInfo.assetName,
+            VLIQUID_CONTRACTID,
+            input.bonusTokenAmount
+        };
+        TransferMicroToken_output _transferMicroToken_output;
+        CALL(TransferMicroToken, _transferMicroToken_input, _transferMicroToken_output);
+
+        // Update the total bonus token amount in the staking pool
+        state._tempStakingPool.totalBonusTokenAmount += input.bonusTokenAmount;
+
+        // Save the updated staking pool state
+        state._stakingPools.set(input.liquidId, state._tempStakingPool);
+    _
+    struct Stake_locals {
+        uint64 _rewardDebt;
+        uint64 _reward;
+        uint64 _providerIndex;
+        uint64 _stakerIndex;
+        uint64 _elapsedTick;
+        bool _providerFound;
+        bool _stakerFound;
+    };
+    PUBLIC_PROCEDURE_WITH_LOCALS(Stake)
+        state._tempLiquid = state._liquids.get(input.liquidId);
+
+        // if liquid was not created, return invocation reward and exit
+        if(state._tempLiquid.isCreated) {
+            qpi.transfer(qpi.invocator(), qpi.invocationReward());
+            return;
+        }
+
+        state._tempStakingPool = state._stakingPools.get(input.liquidId);
+
+        // if stakingPool was not initialized, return invocation reward and exit
+        if(!state._tempStakingPool.isInitialized){
+            qpi.transfer(qpi.invocator(), qpi.invocationReward());
+            return;
+        }
+
+        for(uint64 i = 0; i < state._tempLiquid.liquidProvidersCount; i++) {
+            if(state._tempLiquid.liquidProviders.get(i).owner == qpi.invocator()) {
+                locals._providerIndex = i;
+                locals._providerFound = true;
+                break;
+            }
+        }
+
+        // if provider was not found, return invocation reward and exit
+        if(!locals._providerFound) {
+            qpi.transfer(qpi.invocator(), qpi.invocationReward());
+            return;
+        }
+
+        // validate the input lp amount
+        if(input.lpAmount > state._tempLiquid.liquidProviders.get(locals._providerIndex).tokenContributions) {
+            qpi.transfer(qpi.invocator(), qpi.invocationReward());
+            return; // Error: Invalid lp amount
+        }
+
+        // update staking pool accPerShare
+        locals._elapsedTick = qpi.tick() - state._tempStakingPool.lastRewardTick;
+        if (state._tempStakingPool.totalStaked > 0) {
+            state._tempStakingPool.accPerShare += locals._elapsedTick * 1e12 / state._tempStakingPool.totalStaked;
+            state._tempStakingPool.lastRewardTick = qpi.tick();
+        } else {
+            // if no staked amount, return invocation reward and exit
+            qpi.transfer(qpi.invocator(), qpi.invocationReward());
+            return;
+        }
+
+        // check if the staker already exists
+        for(uint64 i = 0; i < state._tempStakingPool.stakerCount; i++) {
+            if(state._tempStakingPool.stakers.get(i).stakerId == qpi.invocator()) {
+                locals._stakerIndex = i;
+                locals._stakerFound = true;
+                break;
+            }
+        }
+
+        if(!locals._stakerFound) {
+            // calculate the reward debt
+            locals._rewardDebt = input.lpAmount * state._tempStakingPool.accPerShare;
+
+            // create a new staker
+            state._tempStakingPool.stakers.set(state._tempStakingPool.stakerCount, _Staker{ qpi.invocator(), input.lpAmount, locals._rewardDebt });
+            state._tempStakingPool.stakerCount++;
+
+            // update the provider
+            state._tempLiquid.liquidProviders.set(locals._providerIndex, _LiquidInfo::LiquidProvider{ state._tempLiquid.liquidProviders.get(locals._providerIndex).owner, state._tempLiquid.liquidProviders.get(locals._providerIndex).tokenContributions - input.lpAmount });
+        }
+        else {
+            // calculate the reward
+            locals._reward = (input.lpAmount * state._tempStakingPool.accPerShare - state._tempStakingPool.stakers.get(locals._stakerIndex).rewardDebt) / 1e12;
+
+            // transfer the reward to the staker
+            // validate totalBonus token amount
+            if(state._tempStakingPool.totalBonusTokenAmount < locals._reward) {
+                locals._reward = state._tempStakingPool.totalBonusTokenAmount;
+            }
+            TransferMicroToken_input _transferMicroToken_input{ state._tempStakingPool.bonusTokenInfo.issuer, state._tempStakingPool.bonusTokenInfo.assetName, qpi.invocator(), locals._reward};
+            TransferMicroToken_output _transferMicroToken_output;
+            CALL(TransferMicroToken, _transferMicroToken_input, _transferMicroToken_output);
+
+            // calculate the reward debt
+            locals._rewardDebt = (state._tempStakingPool.stakers.get(locals._stakerIndex).stakedAmount + input.lpAmount) * state._tempStakingPool.accPerShare;
+            
+            // update the staker
+            state._tempStakingPool.stakers.set(locals._stakerIndex, _Staker{ qpi.invocator(), state._tempStakingPool.stakers.get(locals._stakerIndex).stakedAmount + input.lpAmount, locals._rewardDebt });
+
+            // update the provider
+            state._tempLiquid.liquidProviders.set(locals._providerIndex, _LiquidInfo::LiquidProvider{ qpi.invocator(), state._tempLiquid.liquidProviders.get(locals._providerIndex).tokenContributions - input.lpAmount });
+        }
+
+        // update the liquid and staking pool
+        state._liquids.set(input.liquidId, state._tempLiquid);
+        state._stakingPools.set(input.liquidId, state._tempStakingPool);
+    _
+    struct Unstake_locals {
+        uint64 _rewardDebt;
+        uint64 _reward;
+        uint64 _stakerIndex;
+        uint64 _providerIndex;
+        uint64 _elapsedTick;
+        bool _stakerFound;
+        bool _providerFound;
+    };
+    PUBLIC_PROCEDURE_WITH_LOCALS(Unstake)
+        state._tempLiquid = state._liquids.get(input.liquidId);
+
+        // if liquid was not created, return invocation reward and exit
+        if(state._tempLiquid.isCreated) {
+            qpi.transfer(qpi.invocator(), qpi.invocationReward());
+            return;
+        }
+
+        // find the provider
+        for(uint64 i = 0; i < state._tempLiquid.liquidProvidersCount; i++) {
+            if(state._tempLiquid.liquidProviders.get(i).owner == qpi.invocator()) {
+                locals._providerIndex = i;
+                locals._providerFound = true;
+                break;
+            }
+        }
+
+        // if provider was not found, return invocation reward and exit
+        if(!locals._providerFound) {
+            qpi.transfer(qpi.invocator(), qpi.invocationReward());
+            return;
+        }
+
+        state._tempStakingPool = state._stakingPools.get(input.liquidId);
+
+        // if stakingPool was not initialized, return invocation reward and exit
+        if(!state._tempStakingPool.isInitialized){
+            qpi.transfer(qpi.invocator(), qpi.invocationReward());
+            return;
+        }
+
+        // check if the staker exists
+        for(uint64 i = 0; i < state._tempStakingPool.stakerCount; i++) {
+            if(state._tempStakingPool.stakers.get(i).stakerId == qpi.invocator()) {
+                locals._stakerIndex = i;
+                locals._stakerFound = true;
+                break;
+            }
+        }
+
+        // if staker was not found, return invocation reward and exit
+        if(!locals._stakerFound) {
+            qpi.transfer(qpi.invocator(), qpi.invocationReward());
+            return;
+        }
+
+        // validate the unstake amount
+        if(input.lpAmount > state._tempStakingPool.stakers.get(locals._stakerIndex).stakedAmount) {
+            qpi.transfer(qpi.invocator(), qpi.invocationReward());
+            return; // Error: Invalid unstake amount
+        }
+
+        // update staking pool accPerShare
+        locals._elapsedTick = qpi.tick() - state._tempStakingPool.lastRewardTick;
+        if (state._tempStakingPool.totalStaked > 0) {
+            state._tempStakingPool.accPerShare += locals._elapsedTick * 1e12 / state._tempStakingPool.totalStaked;
+            state._tempStakingPool.lastRewardTick = qpi.tick();
+        } else {
+            // if no staked amount, return invocation reward and exit
+            qpi.transfer(qpi.invocator(), qpi.invocationReward());
+            return;
+        }
+
+        // calculate the reward
+        locals._reward = (state._tempStakingPool.stakers.get(locals._stakerIndex).stakedAmount * state._tempStakingPool.accPerShare - state._tempStakingPool.stakers.get(locals._stakerIndex).rewardDebt) / 1e12;
+
+        // transfer the reward to the staker
+        // validate totalBonus token amount
+        if(state._tempStakingPool.totalBonusTokenAmount < locals._reward) {
+            locals._reward = state._tempStakingPool.totalBonusTokenAmount;
+        }
+        TransferMicroToken_input _transferMicroToken_input{ state._tempStakingPool.bonusTokenInfo.issuer, state._tempStakingPool.bonusTokenInfo.assetName, qpi.invocator(), locals._reward};
+        TransferMicroToken_output _transferMicroToken_output;
+        CALL(TransferMicroToken, _transferMicroToken_input, _transferMicroToken_output);
+
+        // update the staker's staked amount and reward debt
+        locals._rewardDebt = (state._tempStakingPool.stakers.get(locals._stakerIndex).stakedAmount - input.lpAmount) * state._tempStakingPool.accPerShare;
+        state._tempStakingPool.stakers.set(locals._stakerIndex, _Staker{ qpi.invocator(), state._tempStakingPool.stakers.get(locals._stakerIndex).stakedAmount - input.lpAmount, locals._rewardDebt });
+
+        // update the provider's contributions
+        state._tempLiquid.liquidProviders.set(locals._providerIndex, _LiquidInfo::LiquidProvider{ qpi.invocator(), state._tempLiquid.liquidProviders.get(locals._providerIndex).tokenContributions + input.lpAmount });
+
+        // update the liquid and staking pool
+        state._liquids.set(input.liquidId, state._tempLiquid);
+        state._stakingPools.set(input.liquidId, state._tempStakingPool);
     _
     REGISTER_USER_FUNCTIONS_AND_PROCEDURES
         REGISTER_USER_FUNCTION(MicroTokenAllowance, 1);
