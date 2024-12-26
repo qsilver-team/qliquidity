@@ -5,6 +5,7 @@ using namespace QPI;
 #define MAX_TOKENS 8
 #define LIQUIDS_LENGTH 128
 #define LIQUID_CREATION_FEE 100000000
+#define ASSET_ISSUANCE_FEE 100000000
 #define QWALLET_TOKEN 23720092042876753ULL
 #define QWALLET_ISSUER_ID _mm256_set_epi8(25, 178, 91, 147, 113, 184, 41, 95, 201, 196, 83, 72, 72, 121, 112, 207, 56, 34, 123, 70, 46, 238, 205, 207, 42, 107, 220, 170, 172, 141, 173, 116)
 #define VALIS_ISSUER_ID _mm256_set_epi8(223, 190, 63, 172, 212, 56, 31, 53, 61, 6, 147, 71, 218, 67, 130, 162, 84, 131, 24, 172, 37, 131, 179, 198, 179, 115, 142, 132, 191, 63, 106, 1)
@@ -273,6 +274,18 @@ public:
     struct Unstake_output
     {
         uint64 unstakedLpAmount;
+    };
+
+    struct IssueAsset_input
+    {
+        uint64 assetName;
+        sint64 numberOfShares;
+        uint64 unitOfMeasurement;
+        sint8 numberOfDecimalPlaces;
+    };
+    struct IssueAsset_output
+    {
+        sint64 issuedNumberOfShares;
     };
 
     // Exam
@@ -1976,6 +1989,36 @@ private:
         // update the liquid and staking pool
         state._liquids.set(input.liquidId, state._tempLiquid);
         state._stakingPools.set(input.liquidId, state._tempStakingPool);
+    _
+
+    PUBLIC_PROCEDURE(IssueAsset)
+        // Check if sufficient fee is provided
+        if (qpi.invocationReward() < ASSET_ISSUANCE_FEE)
+        {
+            if (qpi.invocationReward() > 0)
+            {
+                qpi.transfer(qpi.invocator(), qpi.invocationReward());
+            }
+
+            output.issuedNumberOfShares = 0;
+        }
+        else
+        {
+            // Handle excess invocation reward
+            if (qpi.invocationReward() > ASSET_ISSUANCE_FEE)
+            {
+                qpi.transfer(qpi.invocator(), qpi.invocationReward() - ASSET_ISSUANCE_FEE);
+            }
+
+            // Issue the asset
+            output.issuedNumberOfShares = qpi.issueAsset(
+                input.assetName,
+                qpi.invocator(),
+                input.numberOfDecimalPlaces,
+                input.numberOfShares,
+                input.unitOfMeasurement
+            );
+        }
     _
     REGISTER_USER_FUNCTIONS_AND_PROCEDURES
         REGISTER_USER_FUNCTION(MicroTokenAllowance, 1);
